@@ -1,0 +1,139 @@
+{
+  "fixtureNote": "Synthetic sample Fiverr-style row using only supported MVP fields.",
+  "niche": {
+    "id": "niche_ai_agents",
+    "name": "AI Agents",
+    "createdAt": "2026-06-18T09:00:00.000Z"
+  },
+  "importRun": {
+    "id": "import_2026_06_18_ai_agents_sample",
+    "nicheId": "niche_ai_agents",
+    "sourceFileName": "ai_agents_sample.csv",
+    "fileType": "csv",
+    "uploadedAt": "2026-06-18T09:01:00.000Z",
+    "rowCount": 1,
+    "supportedFieldNames": [
+      "gig_url",
+      "gig_image_url",
+      "seller_profile_image_url",
+      "seller_profile_url",
+      "seller_name",
+      "seller_badge_icon_url",
+      "seller_badge_text",
+      "gig_title",
+      "rating",
+      "review_count",
+      "starting_price",
+      "extra_features"
+    ],
+    "ignoredFieldNames": []
+  },
+  "rawGigRow": {
+    "id": "raw_row_1",
+    "importRunId": "import_2026_06_18_ai_agents_sample",
+    "rowNumber": 1,
+    "rawData": {
+      "gig_url": "https://www.fiverr.com/sample-seller/build-ai-agents",
+      "gig_image_url": "https://example.com/gig-image.jpg",
+      "seller_profile_image_url": "https://example.com/profile-image.jpg",
+      "seller_profile_url": "https://www.fiverr.com/sample-seller",
+      "seller_name": "Sample Seller",
+      "seller_badge_icon_url": "https://example.com/badge.svg",
+      "seller_badge_text": "Top Rated Seller",
+      "gig_title": "I will build custom n8n AI agents with OpenAI and FastAPI",
+      "rating": "4.9",
+      "review_count": "1,200",
+      "starting_price": "USD 150",
+      "extra_features": "OpenAI integration, n8n automation, FastAPI backend"
+    }
+  },
+  "normalizedGig": {
+    "id": "gig_1",
+    "importRunId": "import_2026_06_18_ai_agents_sample",
+    "rawRowId": "raw_row_1",
+    "nicheId": "niche_ai_agents",
+    "isValid": true,
+    "isDuplicate": false,
+    "gig_url": "https://www.fiverr.com/sample-seller/build-ai-agents",
+    "gig_image_url": "https://example.com/gig-image.jpg",
+    "seller_profile_image_url": "https://example.com/profile-image.jpg",
+    "seller_profile_url": "https://www.fiverr.com/sample-seller",
+    "seller_name": "Sample Seller",
+    "seller_badge_icon_url": "https://example.com/badge.svg",
+    "seller_badge_text": "Top Rated Seller",
+    "gig_title": "I will build custom n8n AI agents with OpenAI and FastAPI",
+    "rating": {
+      "raw": "4.9",
+      "value": 4.9
+    },
+    "review_count": {
+      "raw": "1,200",
+      "value": 1200
+    },
+    "starting_price": {
+      "raw": "USD 150",
+      "currencyText": "USD",
+      "value": 150
+    },
+    "extra_features": "OpenAI integration, n8n automation, FastAPI backend",
+    "normalizedAt": "2026-06-18T09:02:00.000Z"
+  },
+  "keywordMetric": {
+    "id": "keyword_n8n",
+    "importRunId": "import_2026_06_18_ai_agents_sample",
+    "nicheId": "niche_ai_agents",
+    "keyword": "n8n",
+    "frequency": 1,
+    "sourceFields": ["gig_title", "extra_features"],
+    "matchingGigIds": ["gig_1"],
+    "evidence": [
+      "gig_title contains n8n",
+      "extra_features contains n8n"
+    ]
+  },
+  "pricingMetric": {
+    "id": "pricing_ai_agents",
+    "importRunId": "import_2026_06_18_ai_agents_sample",
+    "nicheId": "niche_ai_agents",
+    "sampleSize": 1,
+    "currencyText": "USD",
+    "min": 150,
+    "max": 150,
+    "mean": 150,
+    "median": 150,
+    "q1": 150,
+    "q3": 150,
+    "priceBand": "unknown"
+  },
+  "competitorMetric": {
+    "id": "competitor_n8n_mid",
+    "importRunId": "import_2026_06_18_ai_agents_sample",
+    "nicheId": "niche_ai_agents",
+    "keyword": "n8n",
+    "priceBand": "unknown",
+    "competitorGigIds": ["gig_1"],
+    "evidence": [
+      "Single imported gig matches n8n keyword"
+    ],
+    "caution": [
+      "One-row fixture is not enough for real competitor conclusions"
+    ]
+  },
+  "opportunityMetric": {
+    "id": "opportunity_n8n",
+    "importRunId": "import_2026_06_18_ai_agents_sample",
+    "nicheId": "niche_ai_agents",
+    "keyword": "n8n",
+    "frequency": 1,
+    "competition_score": 10,
+    "price_score": 50,
+    "differentiation_score": 40,
+    "opportunity_score": 35,
+    "evidence": [
+      "n8n appears in imported gig title and extra_features"
+    ],
+    "caution": [
+      "Sample fixture uses one imported row and cannot represent market demand"
+    ]
+  }
+}

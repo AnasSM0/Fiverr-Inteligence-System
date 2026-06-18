@@ -1,0 +1,5 @@
+gig_url,gig_image_url,seller_profile_image_url,seller_profile_url,seller_name,seller_badge_icon_url,seller_badge_text,gig_title,rating,review_count,starting_price,extra_features
+https://www.fiverr.com/sample-seller/build-ai-agents,https://example.com/gig-image.jpg,https://example.com/profile-image.jpg,https://www.fiverr.com/sample-seller,Sample Seller,https://example.com/badge.svg,Top Rated Seller,I will build custom n8n AI agents with OpenAI and FastAPI,4.9,"1,200",USD 150,"OpenAI integration, n8n automation, FastAPI backend"
+https://www.fiverr.com/sample-seller/build-ai-agents,https://example.com/gig-image-duplicate.jpg,https://example.com/profile-image.jpg,https://www.fiverr.com/sample-seller,Sample Seller,https://example.com/badge.svg,Top Rated Seller,I will build custom n8n AI agents with OpenAI and FastAPI,4.9,"1,200",USD 150,"Duplicate row"
+https://www.fiverr.com/other-seller/make-zapier-automation,,,,Other Seller,,,I will make Zapier and Make automations,4.8,250,$75,"Zapier, Make, workflow automation"
+,https://example.com/bad.jpg,,https://www.fiverr.com/bad-seller,Bad Seller,,,Broken row,4.7,10,$50,
