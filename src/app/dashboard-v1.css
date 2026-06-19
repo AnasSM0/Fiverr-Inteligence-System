@@ -1,22 +1,22 @@
 :root {
-  color-scheme: light dark;
-  --bg: #f7f8fb;
-  --panel: rgba(255, 255, 255, 0.86);
-  --panel-strong: #ffffff;
-  --text: #15171c;
-  --muted: #687083;
-  --border: rgba(20, 23, 28, 0.1);
-  --soft-border: rgba(20, 23, 28, 0.07);
-  --accent: #1f7a5f;
-  --accent-strong: #0f5f49;
-  --accent-soft: rgba(31, 122, 95, 0.12);
-  --blue: #2563eb;
-  --blue-soft: rgba(37, 99, 235, 0.12);
-  --amber: #b45309;
-  --amber-soft: rgba(245, 158, 11, 0.14);
-  --rose: #be3a57;
-  --rose-soft: rgba(244, 63, 94, 0.1);
-  --shadow: 0 18px 55px rgba(25, 32, 44, 0.09);
+  color-scheme: dark;
+  --bg: #090a0d;
+  --panel: rgba(23, 25, 31, 0.84);
+  --panel-strong: #111319;
+  --text: #f4f6fb;
+  --muted: #9aa3b7;
+  --border: rgba(244, 246, 251, 0.12);
+  --soft-border: rgba(244, 246, 251, 0.08);
+  --accent: #52d0a6;
+  --accent-strong: #8ee7c8;
+  --accent-soft: rgba(82, 208, 166, 0.14);
+  --blue: #7aa2ff;
+  --blue-soft: rgba(122, 162, 255, 0.14);
+  --amber: #f0b35d;
+  --amber-soft: rgba(240, 179, 93, 0.13);
+  --rose: #ff8a9e;
+  --rose-soft: rgba(255, 138, 158, 0.12);
+  --shadow: 0 18px 55px rgba(0, 0, 0, 0.36);
   --radius: 8px;
   --space-1: 4px;
   --space-2: 8px;
@@ -201,7 +201,10 @@ p {
 
 .section-grid,
 .two-column,
-.strategy-grid {
+.strategy-grid,
+.onboarding-grid,
+.invalid-import-grid,
+.mission-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(360px, 0.72fr);
   gap: var(--space-5);
@@ -230,6 +233,176 @@ p {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+.onboarding-panel,
+.import-error-panel,
+.mission-panel,
+.mission-side-panel {
+  display: grid;
+  align-content: start;
+  gap: var(--space-5);
+}
+
+.onboarding-steps {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.onboarding-step {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+  align-items: start;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  background: var(--panel-strong);
+}
+
+.onboarding-step span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  font-weight: 800;
+}
+
+.onboarding-step strong {
+  align-self: center;
+}
+
+.onboarding-step p {
+  grid-column: 2;
+  margin-bottom: 0;
+}
+
+.invalid-import-grid {
+  align-items: stretch;
+}
+
+.import-error-panel {
+  border-color: rgba(190, 56, 56, 0.28);
+  background:
+    linear-gradient(180deg, var(--rose-soft), transparent 62%),
+    var(--panel);
+}
+
+.mission-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.42fr);
+  align-items: start;
+}
+
+.mission-panel {
+  background:
+    linear-gradient(135deg, var(--accent-soft), transparent 42%),
+    var(--panel);
+}
+
+.mission-decision-grid,
+.market-reality-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.mission-angle {
+  display: grid;
+  gap: var(--space-3);
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: var(--radius);
+  padding: var(--space-5);
+  background: var(--blue-soft);
+}
+
+.mission-angle strong {
+  font-size: 20px;
+  line-height: 1.45;
+}
+
+.mission-side-panel .section-header {
+  margin-bottom: 0;
+}
+
+.market-reality-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.advanced-details {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.advanced-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  cursor: pointer;
+  list-style: none;
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.08), transparent 48%),
+    var(--panel-strong);
+}
+
+.advanced-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.advanced-details > summary span {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.advanced-details > summary strong {
+  font-size: 20px;
+}
+
+.advanced-details > summary small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.advanced-details > summary em {
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: var(--space-2) var(--space-4);
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  font-style: normal;
+  font-weight: 700;
+}
+
+.advanced-details[open] > summary em {
+  color: var(--muted);
+  background: var(--panel);
+}
+
+.advanced-details[open] > summary em::before {
+  content: "Close ";
+}
+
+.advanced-details:not([open]) > summary em::before {
+  content: "Open ";
+}
+
+.advanced-details-body {
+  padding: 0 var(--space-5) var(--space-5);
+}
+
+.advanced-details-body > .dashboard-section:first-child {
+  margin-top: var(--space-5);
 }
 
 .field-label {
@@ -920,6 +1093,9 @@ th {
   .section-grid,
   .two-column,
   .strategy-grid,
+  .onboarding-grid,
+  .invalid-import-grid,
+  .mission-grid,
   .matrix-header,
   .success-strip {
     grid-template-columns: 1fr;
@@ -928,8 +1104,14 @@ th {
 
   .metric-grid,
   .success-stats,
-  .keyword-intelligence-grid {
+  .keyword-intelligence-grid,
+  .mission-decision-grid,
+  .market-reality-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .market-reality-panels {
+    grid-template-columns: 1fr;
   }
 
   .keyword-panel.wide {
@@ -961,11 +1143,21 @@ th {
   .health-grid,
   .success-stats,
   .keyword-intelligence-grid,
+  .mission-decision-grid,
+  .market-reality-grid,
   .opportunity-highlight-grid,
   .competitor-metrics,
   .matrix-controls {
     grid-template-columns: 1fr;
     flex-direction: column;
+  }
+
+  .onboarding-step {
+    grid-template-columns: 1fr;
+  }
+
+  .onboarding-step p {
+    grid-column: 1;
   }
 
   .matrix-controls,
@@ -975,7 +1167,8 @@ th {
 
   .opportunity-card-top,
   .opportunity-card-footer,
-  .summary-footer {
+  .summary-footer,
+  .advanced-details > summary {
     flex-direction: column;
     align-items: flex-start;
   }

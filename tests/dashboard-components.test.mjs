@@ -6,35 +6,26 @@ import { createDashboardView } from "../src/components/dashboard/dashboard-compo
 import { createDashboardModelFromImport } from "../src/lib/dashboard/dashboard-model.js";
 import { importGigFile } from "../src/lib/import/import-service.js";
 
-test("renders market intelligence dashboard sections without demo analytics", () => {
+test("renders polished upload onboarding before analytics exist", () => {
   const html = createDashboardView();
 
-  for (const sectionTitle of [
-    "Import Dataset",
-    "Executive Market Brief",
-    "Opportunity Highlights",
-    "Market Health",
-    "Keyword Intelligence",
-    "Pricing Intelligence",
-    "Competitor Intelligence",
-    "Opportunity Matrix",
-    "Positioning Strategy",
-    "Fiverr Positioning Suggestions",
-    "Profile Optimization Insights",
-    "Cleaning Report",
-    "Deterministic Notes",
-  ]) {
-    assert.match(html, new RegExp(sectionTitle));
-  }
-
+  assert.match(html, /Import Dataset/);
+  assert.match(html, /Start With Your File/);
+  assert.match(html, /Upload CSV\/XLSX/);
+  assert.match(html, /Review cleaning/);
+  assert.match(html, /Discover opportunities/);
   assert.match(html, /No file selected/);
-  assert.match(html, /No executive brief yet/);
-  assert.match(html, /No opportunity matrix yet/);
+  assert.doesNotMatch(html, /Mission Control/);
+  assert.doesNotMatch(html, /Top Opportunities/);
+  assert.doesNotMatch(html, /Market Reality/);
+  assert.doesNotMatch(html, /Competitors To Study/);
+  assert.doesNotMatch(html, /Opportunity Matrix/);
+  assert.doesNotMatch(html, /Cleaning Report/);
   assert.doesNotMatch(html.toLowerCase(), /lorem ipsum/);
   assert.doesNotMatch(html.toLowerCase(), /guarantee revenue|guarantee ranking/);
 });
 
-test("renders supplied deterministic intelligence with evidence, cautions, and strategy sections", () => {
+test("renders supplied deterministic intelligence in simplified dashboard sections", () => {
   const html = createDashboardView({
     niche: { name: "AI Agents" },
     importSummary: {
@@ -202,10 +193,17 @@ test("renders supplied deterministic intelligence with evidence, cautions, and s
   });
 
   assert.match(html, /AI Agents/);
-  assert.match(html, /Executive Market Brief/);
+  assert.match(html, /Mission Control/);
+  assert.match(html, /Top Opportunities/);
+  assert.match(html, /Market Reality/);
+  assert.match(html, /Competitors To Study/);
+  assert.match(html, /Opportunity Matrix/);
+  assert.match(html, /Advanced Details/);
   assert.match(html, /claude/);
   assert.match(html, /Directional analysis from imported dataset only/);
   assert.match(html, /Why they stand out/);
+  assert.match(html, /Price range to study/);
+  assert.match(html, /Positioning angle/);
   assert.match(html, /Lead with the clearest opportunity/);
   assert.match(html, /Headline focus/);
   assert.match(html, /gig_url is required/);
@@ -241,8 +239,9 @@ test("renders column mapping report for Instant Data Scraper uploads", async () 
   assert.match(html, /gig_url/);
   assert.match(html, /text-bold 2/);
   assert.match(html, /starting_price/);
-  assert.match(html, /Import success/);
-  assert.match(html, /Opportunity Highlights/);
+  assert.match(html, /Mission Control/);
+  assert.match(html, /Top Opportunities/);
+  assert.match(html, /Advanced Details/);
 });
 
 test("renders real uploaded CSV analytics through import, pipeline, and dashboard model", async () => {
@@ -275,6 +274,45 @@ test("renders real uploaded CSV analytics through import, pipeline, and dashboar
   assert.doesNotMatch(html, /Column Mapping Applied/);
   assert.match(html, /n8n|openai|zapier/);
   assert.match(html, /Directional analysis from the uploaded dataset only/);
+  assert.match(html, /Mission Control/);
+  assert.match(html, /Top Opportunities/);
+  assert.match(html, /Market Reality/);
+  assert.match(html, /Competitors To Study/);
+  assert.match(html, /Opportunity Matrix/);
+  assert.match(html, /Advanced Details/);
   assert.match(html, /Fiverr Positioning Suggestions/);
   assert.doesNotMatch(html.toLowerCase(), /lorem ipsum|guarantee revenue|guarantee ranking/);
+});
+
+test("renders no-valid-row imports as cleaning report without analytics dashboard", () => {
+  const importResult = importGigFile({
+    fileName: "missing-required.csv",
+    content: "media href,_30fcb2\nhttps://www.fiverr.com/a/b,Title\n",
+    niche: {
+      id: "niche_ai_agents",
+      name: "AI Agents",
+      createdAt: "2026-06-18T09:00:00.000Z",
+    },
+    uploadedAt: "2026-06-18T09:01:00.000Z",
+    importRunId: "import_dashboard_no_valid_rows",
+  });
+
+  const model = createDashboardModelFromImport(importResult);
+  const html = createDashboardView({
+    ...model,
+    uploadStatus: {
+      tone: "error",
+      message: "Import finished with no valid deduplicated rows available for analytics. Review the cleaning report.",
+    },
+  });
+
+  assert.equal(model.importSummary.validRows, 0);
+  assert.match(html, /Import Needs Review/);
+  assert.match(html, /Cleaning Report/);
+  assert.match(html, /Missing required column: starting_price/);
+  assert.match(html, /Column Mapping Applied/);
+  assert.doesNotMatch(html, /Mission Control/);
+  assert.doesNotMatch(html, /Top Opportunities/);
+  assert.doesNotMatch(html, /Market Reality/);
+  assert.doesNotMatch(html, /Opportunity Matrix/);
 });

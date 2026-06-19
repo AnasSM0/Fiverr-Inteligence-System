@@ -26,20 +26,19 @@ const EMPTY_DASHBOARD_MODEL = Object.freeze({
  */
 export function createDashboardView(model = {}) {
   const data = { ...EMPTY_DASHBOARD_MODEL, ...model };
+  const hasCompletedImport = Boolean(data.importSummary || data.cleaningReport);
+  const validRows = data.importSummary?.validRows ?? data.marketSnapshot?.totalGigs ?? data.importSuccess?.gigsAnalyzed ?? 0;
+  const hasValidRows = validRows > 0;
+  const body = !hasCompletedImport
+    ? createPreUploadState(data)
+    : hasValidRows
+      ? createAnalyzedDashboard(data)
+      : createNoValidRowsState(data);
+
   return `
     <main class="dashboard-shell">
       ${createHero(data)}
-      ${createImportOverview(data)}
-      ${createExecutiveBrief(data)}
-      ${createOpportunityHighlights(data)}
-      ${createMarketHealth(data)}
-      ${createKeywordIntelligence(data)}
-      ${createPricingIntelligence(data)}
-      ${createCompetitorIntelligence(data)}
-      ${createOpportunityMatrix(data)}
-      ${createStrategySections(data)}
-      ${createCleaningReport(data)}
-      ${createInsightsPanel(data)}
+      ${body}
     </main>
   `;
 }
@@ -74,37 +73,131 @@ function createImportOverview(data) {
   const summary = data.importSummary;
   return `
     <section class="dashboard-section section-grid import-grid" aria-labelledby="import-overview-title">
-      <div class="panel upload-panel">
-        ${createSectionHeader("Import Dataset", "Upload a user-provided CSV or XLSX. The app can suggest a niche automatically, and the field remains editable.", "import-overview-title")}
-        <label class="field-label" for="niche-input">Niche override</label>
-        <input id="niche-input" class="text-input" name="niche" type="text" placeholder="Optional: AI Agents, Shopify, WordPress..." value="${escapeAttribute(data.niche?.name ?? "")}" />
-        <label class="upload-dropzone" for="file-input">
-          <input id="file-input" name="file" type="file" accept=".csv,.xlsx" />
-          <span class="upload-kicker">CSV/XLSX import</span>
-          <strong>Choose a supported Fiverr dataset</strong>
-          <span id="selected-file-label">No file selected</span>
-        </label>
-        ${data.uploadStatus ? createCallout(data.uploadStatus.tone, data.uploadStatus.message) : ""}
-        ${createNicheDetectionPanel(data.nicheDetection)}
-      </div>
-      <div class="panel summary-panel">
-        ${createSectionHeader("Import Summary", summary ? "Latest deterministic import health." : "Waiting for an imported dataset.", "import-summary-title")}
-        <div class="metric-grid compact">
-          ${createMetricCard("Total gigs", summary?.totalRows, "Rows in source file")}
-          ${createMetricCard("Valid rows", summary?.validRows, "Available for analytics")}
-          ${createMetricCard("Invalid rows", summary?.invalidRows, "Needs review")}
-          ${createMetricCard("Duplicates", summary?.duplicateRows, "Excluded from aggregates")}
-          ${createMetricCard("Warnings", summary?.warnings, "Data quality notices")}
-          ${createMetricCard("Mapped columns", summary?.columnMapping?.mappings?.length, "Auto-detected headers")}
-        </div>
-        <div class="summary-footer">
-          <span>${summary?.fileName ? escapeHtml(summary.fileName) : "Last import"}</span>
-          <strong>${summary?.lastImportedAt ? escapeHtml(summary.lastImportedAt) : "No import yet"}</strong>
-        </div>
-        ${summary?.importId ? `<div class="summary-footer compact-footer"><span>Import ID</span><strong>${escapeHtml(summary.importId)}</strong></div>` : ""}
-      </div>
+      ${createUploadPanel(data)}
+      ${createImportSummaryPanel(summary)}
     </section>
     ${createImportSuccess(data.importSuccess)}
+  `;
+}
+
+/**
+ * @param {typeof EMPTY_DASHBOARD_MODEL} data
+ */
+function createPreUploadState(data) {
+  return `
+    <section class="dashboard-section onboarding-grid" aria-labelledby="empty-dashboard-title">
+      ${createUploadPanel(data)}
+      <div class="panel onboarding-panel">
+        ${createSectionHeader("Start With Your File", "Upload exported Fiverr rows. No analytics sections appear until real rows are imported.", "empty-dashboard-title")}
+        <div class="onboarding-steps" aria-label="Dashboard onboarding steps">
+          ${createOnboardingStep("1", "Upload CSV/XLSX", "Use the exact MVP columns or an Instant Data Scraper export.")}
+          ${createOnboardingStep("2", "Review cleaning", "Invalid rows, duplicate gigs, ignored columns, and mapping details stay inspectable.")}
+          ${createOnboardingStep("3", "Discover opportunities", "Decision cards and score tables render only from imported data.")}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+/**
+ * @param {typeof EMPTY_DASHBOARD_MODEL} data
+ */
+function createNoValidRowsState(data) {
+  return `
+    <section class="dashboard-section invalid-import-grid" aria-labelledby="invalid-import-title">
+      ${createUploadPanel(data)}
+      <div class="panel import-error-panel">
+        ${createSectionHeader("Import Needs Review", "No valid deduplicated rows are available for analytics yet.", "invalid-import-title")}
+        ${createCallout("error", "The upload finished, but every row failed required validation or was unavailable for analysis. Review the row-level issues below and upload a corrected file.")}
+        ${data.importSummary ? `
+          <div class="metric-grid compact">
+            ${createMetricCard("Total rows", data.importSummary.totalRows, "Rows in source file")}
+            ${createMetricCard("Valid rows", data.importSummary.validRows, "Available for analytics")}
+            ${createMetricCard("Invalid rows", data.importSummary.invalidRows, "Needs correction")}
+            ${createMetricCard("Warnings", data.importSummary.warnings, "Data quality notices")}
+          </div>
+        ` : ""}
+      </div>
+    </section>
+    ${createCleaningReport(data)}
+  `;
+}
+
+/**
+ * @param {typeof EMPTY_DASHBOARD_MODEL} data
+ */
+function createAnalyzedDashboard(data) {
+  return `
+    ${createMissionControl(data)}
+    ${createOpportunityHighlights(data)}
+    ${createMarketReality(data)}
+    ${createCompetitorIntelligence(data)}
+    ${createOpportunityMatrix(data)}
+    ${createAdvancedDetails(data)}
+  `;
+}
+
+/**
+ * @param {typeof EMPTY_DASHBOARD_MODEL} data
+ */
+function createUploadPanel(data) {
+  return `
+    <div class="panel upload-panel">
+      ${createUploadControls(data)}
+    </div>
+  `;
+}
+
+/**
+ * @param {typeof EMPTY_DASHBOARD_MODEL} data
+ */
+function createUploadControls(data) {
+  const summary = data.importSummary;
+  const selectedFile = summary?.fileName ? `Current file: ${summary.fileName}` : "No file selected";
+  return `
+    ${createSectionHeader("Import Dataset", "Upload a user-provided CSV or XLSX. The app can suggest a niche automatically, and the field remains editable.", "import-overview-title")}
+    <label class="field-label" for="niche-input">Niche override</label>
+    <input id="niche-input" class="text-input" name="niche" type="text" placeholder="Optional: AI Agents, Shopify, WordPress..." value="${escapeAttribute(data.niche?.name ?? "")}" />
+    <label class="upload-dropzone" for="file-input">
+      <input id="file-input" name="file" type="file" accept=".csv,.xlsx" />
+      <span class="upload-kicker">CSV/XLSX import</span>
+      <strong>Choose a supported Fiverr dataset</strong>
+      <span id="selected-file-label">${escapeHtml(selectedFile)}</span>
+    </label>
+    ${data.uploadStatus ? createCallout(data.uploadStatus.tone, data.uploadStatus.message) : ""}
+    ${createNicheDetectionPanel(data.nicheDetection)}
+  `;
+}
+
+function createImportSummaryPanel(summary) {
+  return `
+    <div class="panel summary-panel">
+      ${createSectionHeader("Import Summary", summary ? "Latest deterministic import health." : "Waiting for an imported dataset.", "import-summary-title")}
+      <div class="metric-grid compact">
+        ${createMetricCard("Total gigs", summary?.totalRows, "Rows in source file")}
+        ${createMetricCard("Valid rows", summary?.validRows, "Available for analytics")}
+        ${createMetricCard("Invalid rows", summary?.invalidRows, "Needs review")}
+        ${createMetricCard("Duplicates", summary?.duplicateRows, "Excluded from aggregates")}
+        ${createMetricCard("Warnings", summary?.warnings, "Data quality notices")}
+        ${createMetricCard("Mapped columns", summary?.columnMapping?.mappings?.length, "Auto-detected headers")}
+      </div>
+      <div class="summary-footer">
+        <span>${summary?.fileName ? escapeHtml(summary.fileName) : "Last import"}</span>
+        <strong>${summary?.lastImportedAt ? escapeHtml(summary.lastImportedAt) : "No import yet"}</strong>
+      </div>
+      ${summary?.importId ? `<div class="summary-footer compact-footer"><span>Import ID</span><strong>${escapeHtml(summary.importId)}</strong></div>` : ""}
+      ${summary?.ignoredColumns?.length ? `<div class="summary-footer compact-footer"><span>Ignored columns</span><strong>${escapeHtml(summary.ignoredColumns.join(", "))}</strong></div>` : ""}
+    </div>
+  `;
+}
+
+function createOnboardingStep(number, title, detail) {
+  return `
+    <article class="onboarding-step">
+      <span>${escapeHtml(number)}</span>
+      <strong>${escapeHtml(title)}</strong>
+      <p>${escapeHtml(detail)}</p>
+    </article>
   `;
 }
 
@@ -172,6 +265,47 @@ function createImportSuccess(success) {
 /**
  * @param {typeof EMPTY_DASHBOARD_MODEL} data
  */
+function createMissionControl(data) {
+  const brief = data.executiveBrief;
+  const summary = data.importSummary;
+  const topCompetitor = data.competitors[0] ?? null;
+  const topOpportunity = data.opportunities[0] ?? null;
+  const topKeyword = data.keywordIntelligence?.dominantKeywords?.[0] ?? data.keywords[0] ?? null;
+  const positioningAngle = topOpportunity || topKeyword
+    ? brief?.positioningRecommendation
+    : "Not enough valid data to generate a positioning angle.";
+
+  return `
+    <section class="dashboard-section mission-section" aria-labelledby="mission-control-title">
+      ${createSectionHeader("Mission Control", "The fastest read on market, competition, opportunity, pricing, competitors, and positioning.", "mission-control-title")}
+      <div class="mission-grid">
+        <div class="panel mission-panel">
+          <div class="mission-decision-grid">
+            ${createSignalCard("Niche / market", data.niche?.name ?? brief?.nicheName ?? "unknown", "Selected or detected niche", "text")}
+            ${createSignalCard("Competitiveness", brief?.competitionLevel ?? "unknown", "Directional dataset read", "text")}
+            ${createSignalCard("Best opportunity", brief?.highestOpportunityKeyword ?? topOpportunity?.keyword ?? "unknown", "Highest matrix score", "text")}
+            ${createSignalCard("Price range to study", formatPriceRange(data.pricing?.lowBand, data.pricing?.highBand, brief?.medianPrice), "Parsed starting prices", "text")}
+            ${createSignalCard("Competitors to inspect", Math.min(data.competitors.length, 8), topCompetitor?.sellerName ? `Top visible seller: ${topCompetitor.sellerName}` : "Comparable gigs from import")}
+            ${createSignalCard("Valid gigs", summary?.validRows ?? brief?.totalGigs, "Deduplicated analytics rows")}
+            ${createSignalCard("Median price", brief?.medianPrice, "Niche midpoint", "currency")}
+            ${createSignalCard("Average reviews", brief?.averageReviews, "Imported review counts")}
+          </div>
+          <div class="mission-angle">
+            <span class="status-badge accent">Positioning angle</span>
+            <strong>${escapeHtml(positioningAngle ?? "Not enough valid data to generate a positioning angle.")}</strong>
+          </div>
+        </div>
+        <aside class="panel mission-side-panel" aria-label="Upload and niche controls">
+          ${createUploadControls(data)}
+        </aside>
+      </div>
+    </section>
+  `;
+}
+
+/**
+ * @param {typeof EMPTY_DASHBOARD_MODEL} data
+ */
 function createExecutiveBrief(data) {
   const brief = data.executiveBrief;
   return `
@@ -202,8 +336,8 @@ function createExecutiveBrief(data) {
  */
 function createOpportunityHighlights(data) {
   return `
-    <section class="dashboard-section" aria-labelledby="opportunity-highlights-title">
-      ${createSectionHeader("Opportunity Highlights", "Top directional opportunities with score components, confidence, evidence, and cautions.", "opportunity-highlights-title")}
+    <section class="dashboard-section" aria-labelledby="top-opportunities-title">
+      ${createSectionHeader("Top Opportunities", "Top directional opportunities with score components, confidence, evidence, and cautions.", "top-opportunities-title")}
       ${data.opportunityHighlights.length > 0 ? `
         <div class="opportunity-highlight-grid">
           ${data.opportunityHighlights.map(createOpportunityHighlightCard).join("")}
@@ -278,6 +412,39 @@ function createMarketHealth(data) {
           ])}
         </div>
       ` : createEmptyState("No market health yet", "Import valid rows to see market health summaries derived from the uploaded dataset.")}
+    </section>
+  `;
+}
+
+/**
+ * @param {typeof EMPTY_DASHBOARD_MODEL} data
+ */
+function createMarketReality(data) {
+  const health = data.marketHealth;
+  const topKeyword = data.keywordIntelligence?.dominantKeywords?.[0] ?? data.keywords[0] ?? null;
+  return `
+    <section class="dashboard-section" aria-labelledby="market-reality-title">
+      ${createSectionHeader("Market Reality", "Compact read on dataset size, price, reviews, keyword saturation, and seller badge signals.", "market-reality-title")}
+      ${health ? `
+        <div class="market-reality-grid">
+          ${createMetricCard("Gigs analyzed", data.importSummary?.validRows ?? health.datasetQuality?.validShare, "Valid deduplicated rows")}
+          ${createMetricCard("Median price", health.medianPrice, "Parsed starting price", "currency")}
+          ${createMetricCard("Average price", health.averagePrice, "Parsed starting price", "currency")}
+          ${createMetricCard("Average reviews", health.averageReviews, "Known review counts")}
+          ${createMetricCard("Most common keyword", topKeyword?.keyword ?? "unknown", `${formatMetric(topKeyword?.frequency)} matching gig(s)`, "text")}
+          ${createMetricCard("Dataset quality", health.datasetQuality.label, health.datasetQuality.evidence, "text")}
+        </div>
+        <div class="market-reality-panels">
+          <div class="panel visual-panel">
+            <h3>Badge Distribution Summary</h3>
+            ${createDistributionBars(health.badgeDistribution.map((item) => ({ label: item.label ?? "unknown", count: item.count, share: item.shareOfNiche })))}
+          </div>
+          <div class="panel visual-panel">
+            <h3>Keyword Saturation Summary</h3>
+            ${createDistributionBars(health.keywordSaturation.map((item) => ({ label: item.keyword, count: item.frequency, share: item.share })))}
+          </div>
+        </div>
+      ` : createEmptyState("No market reality yet", "Import valid rows to see market summaries derived from the uploaded dataset.")}
     </section>
   `;
 }
@@ -372,8 +539,8 @@ function createPricingIntelligence(data) {
  */
 function createCompetitorIntelligence(data) {
   return `
-    <section class="dashboard-section" aria-labelledby="competitor-intelligence-title">
-      ${createSectionHeader("Competitor Intelligence", "Compare sellers by proof, ratings, badges, price posture, and deterministic stand-out reasons.", "competitor-intelligence-title")}
+    <section class="dashboard-section" aria-labelledby="competitors-to-study-title">
+      ${createSectionHeader("Competitors To Study", "Top comparable sellers from imported rows, with deterministic stand-out reasons.", "competitors-to-study-title")}
       <div class="competitor-list">
         ${data.competitors.length > 0 ? data.competitors.slice(0, 8).map(createCompetitorCard).join("") : createEmptyState("No competitor comparison yet", "Valid deduplicated gigs will appear here after import and analytics processing.")}
       </div>
@@ -441,6 +608,87 @@ function createStrategySections(data) {
       <div class="panel recommendation-panel">
         <h3>Profile Optimization Insights</h3>
         ${createRecommendationList(data.profileInsights, "No profile insights yet", "Profile recommendations appear after keyword and competitor signals exist.")}
+      </div>
+    </section>
+  `;
+}
+
+/**
+ * @param {typeof EMPTY_DASHBOARD_MODEL} data
+ */
+function createAdvancedDetails(data) {
+  return `
+    <details class="advanced-details dashboard-section">
+      <summary>
+        <span>
+          <strong>Advanced Details</strong>
+          <small>Import audit, cleaning report, full keyword and pricing analytics, full competitor details, and deterministic notes.</small>
+        </span>
+        <em>Details</em>
+      </summary>
+      <div class="advanced-details-body">
+        ${createImportDetailsReport(data)}
+        ${createCleaningReport(data)}
+        ${createKeywordIntelligence(data)}
+        ${createPricingIntelligence(data)}
+        ${createFullCompetitorDetails(data)}
+        ${createStrategySections(data)}
+        ${createInsightsPanel(data)}
+      </div>
+    </details>
+  `;
+}
+
+/**
+ * @param {typeof EMPTY_DASHBOARD_MODEL} data
+ */
+function createImportDetailsReport(data) {
+  return `
+    <section class="dashboard-section" aria-labelledby="advanced-import-summary-title">
+      ${createSectionHeader("Import Summary", "Source file, import ID, row counts, ignored columns, and mapped headers.", "advanced-import-summary-title")}
+      ${createImportSummaryPanel(data.importSummary)}
+    </section>
+  `;
+}
+
+/**
+ * @param {typeof EMPTY_DASHBOARD_MODEL} data
+ */
+function createFullCompetitorDetails(data) {
+  return `
+    <section class="dashboard-section" aria-labelledby="full-competitor-report-title">
+      ${createSectionHeader("Full Competitor Details", "All deterministic competitor rows available in the current dashboard model.", "full-competitor-report-title")}
+      <div class="panel">
+        ${data.competitors.length > 0 ? `
+          <div class="responsive-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Seller</th>
+                  <th>Gig title</th>
+                  <th>Rating</th>
+                  <th>Reviews</th>
+                  <th>Price</th>
+                  <th>Badge</th>
+                  <th>Why stands out</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${data.competitors.map((competitor) => `
+                  <tr>
+                    <td>${escapeHtml(competitor.sellerName ?? "Unknown seller")}</td>
+                    <td>${escapeHtml(competitor.gigTitle ?? "Untitled gig")}</td>
+                    <td>${formatMetric(competitor.rating)}</td>
+                    <td>${formatMetric(competitor.reviewCount)}</td>
+                    <td>${formatMetric(competitor.price, "currency")}</td>
+                    <td>${escapeHtml(competitor.sellerBadgeText ?? "unknown")}</td>
+                    <td>${escapeHtml(competitor.standOutReason ?? firstText(competitor.evidence))}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        ` : createEmptyState("No competitor details yet", "Competitor rows appear after valid deduplicated gigs are analyzed.")}
       </div>
     </section>
   `;
@@ -767,6 +1015,12 @@ function firstText(values) {
   if (Array.isArray(values) && values.length > 0) return values[0];
   if (typeof values === "string" && values.length > 0) return values;
   return "No evidence available yet";
+}
+
+function formatPriceRange(low, high, fallback) {
+  if (typeof low === "number" && typeof high === "number") return `${formatMetric(low, "currency")} - ${formatMetric(high, "currency")}`;
+  if (typeof fallback === "number") return formatMetric(fallback, "currency");
+  return "unknown";
 }
 
 function clampPercent(value) {
