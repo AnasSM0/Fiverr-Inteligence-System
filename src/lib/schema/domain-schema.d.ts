@@ -17,7 +17,7 @@ export const SUPPORTED_GIG_FIELDS: readonly [
   "extra_features",
 ];
 
-export const REQUIRED_GIG_FIELDS: readonly ["gig_url", "seller_name", "gig_title", "starting_price"];
+export const REQUIRED_GIG_FIELDS: readonly ["gig_url", "gig_title", "starting_price"];
 
 export const OPPORTUNITY_METRIC_COLUMNS: readonly [
   "keyword",

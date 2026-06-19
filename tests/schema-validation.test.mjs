@@ -23,7 +23,7 @@ const fixture = JSON.parse(
 
 test("schema constants support MVP import boundaries", () => {
   assert.deepEqual(SUPPORTED_IMPORT_FILE_TYPES, ["csv", "xlsx"]);
-  assert.deepEqual(REQUIRED_GIG_FIELDS, ["gig_url", "seller_name", "gig_title", "starting_price"]);
+  assert.deepEqual(REQUIRED_GIG_FIELDS, ["gig_url", "gig_title", "starting_price"]);
   assert.deepEqual(SUPPORTED_GIG_FIELDS, [
     "gig_url",
     "gig_image_url",

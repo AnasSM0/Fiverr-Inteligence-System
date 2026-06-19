@@ -27,6 +27,24 @@ export interface Niche {
   createdAt: string;
 }
 
+export interface NicheDetectionResult {
+  suggestedName: string;
+  selectedName: string;
+  confidence: "high" | "medium" | "low";
+  score: number;
+  evidenceKeywords: string[];
+  evidencePhrases: string[];
+  alternatives: Array<{
+    name: string;
+    score: number;
+    evidenceKeywords: string[];
+    evidencePhrases: string[];
+  }>;
+  needsConfirmation: boolean;
+  applied: boolean;
+  manualOverride: boolean;
+}
+
 export interface ImportRun {
   id: string;
   nicheId: string;
@@ -36,16 +54,31 @@ export interface ImportRun {
   rowCount: number;
   supportedFieldNames: SupportedGigField[];
   ignoredFieldNames: string[];
+  originalFieldNames: string[];
+  columnMapping: ColumnMappingReport;
 }
 
 export type RawGigData = Partial<Record<SupportedGigField, string | null>> &
   Record<string, unknown>;
+
+export interface ColumnMappingEntry {
+  sourceColumn: string;
+  targetField: SupportedGigField;
+}
+
+export interface ColumnMappingReport {
+  applied: boolean;
+  mappings: ColumnMappingEntry[];
+  originalFieldNames: string[];
+  ignoredSourceFieldNames: string[];
+}
 
 export interface RawGigRow {
   id: string;
   importRunId: string;
   rowNumber: number;
   rawData: RawGigData;
+  sourceData?: Record<string, string>;
 }
 
 export interface ParsedNumberField {
@@ -68,7 +101,7 @@ export interface NormalizedGig {
   gig_image_url: string | null;
   seller_profile_image_url: string | null;
   seller_profile_url: string | null;
-  seller_name: string;
+  seller_name: string | null;
   seller_badge_icon_url: string | null;
   seller_badge_text: string | null;
   gig_title: string;
@@ -193,7 +226,7 @@ export interface CompetitorGigSummary {
   id: string;
   nicheId: string;
   gigId: string;
-  sellerName: string;
+  sellerName: string | null;
   gigTitle: string;
   reviewCount: number | null;
   rating: number | null;
@@ -224,7 +257,7 @@ export interface PriceReviewPositioningMetric {
   id: string;
   nicheId: string;
   gigId: string;
-  sellerName: string;
+  sellerName: string | null;
   gigTitle: string;
   currencyText: string | null;
   startingPriceValue: number;
@@ -248,7 +281,7 @@ export interface TitlePatternMetric {
 export interface SellerConcentrationMetric {
   id: string;
   nicheId: string;
-  sellerName: string;
+  sellerName: string | null;
   gigCount: number;
   shareOfNiche: number;
   totalReviewCount: number;
@@ -335,6 +368,7 @@ export interface ImportSummary {
 export interface ImportResult {
   niche: Niche;
   importRun: ImportRun;
+  nicheDetection: NicheDetectionResult;
   headerValidation: HeaderValidation;
   rawRows: RawGigRow[];
   normalizedGigs: NormalizedGig[];
@@ -393,3 +427,4 @@ export interface KeywordAnalyticsResult {
   topHighReviewKeywords: KeywordMetric[];
   lowCompetitionKeywordCandidates: OpportunityKeywordCandidate[];
 }
+

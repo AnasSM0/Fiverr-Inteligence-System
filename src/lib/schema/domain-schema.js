@@ -20,7 +20,7 @@ export const SUPPORTED_GIG_FIELDS = [
   "extra_features",
 ];
 
-export const REQUIRED_GIG_FIELDS = ["gig_url", "seller_name", "gig_title", "starting_price"];
+export const REQUIRED_GIG_FIELDS = ["gig_url", "gig_title", "starting_price"];
 
 export const OPPORTUNITY_METRIC_COLUMNS = [
   "keyword",
@@ -265,7 +265,7 @@ export function validateNormalizedGig(value) {
   const errors = [];
   if (!requireRecord(value, "normalizedGig", errors)) return result(errors);
 
-  for (const field of ["id", "importRunId", "rawRowId", "nicheId", "gig_url", "seller_name", "gig_title"]) {
+  for (const field of ["id", "importRunId", "rawRowId", "nicheId", "gig_url", "gig_title"]) {
     requireNonEmptyStringField(value, field, errors);
   }
 
@@ -273,6 +273,7 @@ export function validateNormalizedGig(value) {
     "gig_image_url",
     "seller_profile_image_url",
     "seller_profile_url",
+    "seller_name",
     "seller_badge_icon_url",
     "seller_badge_text",
     "extra_features",

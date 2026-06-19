@@ -229,7 +229,7 @@ function buildSellerConcentration(sellerStats) {
         matchingGigIds: group.gigs.map((gig) => gig.id),
       };
     })
-    .sort((a, b) => a.nicheId.localeCompare(b.nicheId) || b.gigCount - a.gigCount || b.totalReviewCount - a.totalReviewCount || a.sellerName.localeCompare(b.sellerName));
+    .sort((a, b) => a.nicheId.localeCompare(b.nicheId) || b.gigCount - a.gigCount || b.totalReviewCount - a.totalReviewCount || compareText(a.sellerName, b.sellerName));
 }
 
 /**
@@ -444,11 +444,11 @@ function compareNumberDesc(a, b) {
 }
 
 /**
- * @param {string} a
- * @param {string} b
+ * @param {string | null} a
+ * @param {string | null} b
  */
 function compareText(a, b) {
-  return a.localeCompare(b);
+  return displayText(a).localeCompare(displayText(b));
 }
 
 /**
@@ -466,15 +466,23 @@ function currencyDisplay(value) {
 }
 
 /**
- * @param {string} sellerName
+ * @param {string | null} sellerName
  */
 function normalizeSellerName(sellerName) {
-  return sellerName.trim().toLowerCase();
+  return displayText(sellerName).trim().toLowerCase() || "unknown seller";
+}
+
+/**
+ * @param {string | null} value
+ */
+function displayText(value) {
+  return value ?? "";
 }
 
 /**
  * @param {string} value
  */
 function slug(value) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "value";
+  return String(value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "value";
 }
+

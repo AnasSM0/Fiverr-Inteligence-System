@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { read, utils } from "xlsx";
 
 import {
@@ -11,6 +10,7 @@ import {
   parseReviewCount,
   parseStartingPrice,
 } from "../cleaning/cleaning-engine.js";
+import { detectNicheFromGigs, UNCATEGORIZED_NICHE_NAME } from "../niche/niche-detector.js";
 import {
   REQUIRED_GIG_FIELDS,
   SUPPORTED_GIG_FIELDS,
@@ -24,6 +24,21 @@ const OPTIONAL_MEDIA_BADGE_FIELDS = [
   "seller_badge_text",
 ];
 
+export const INSTANT_DATA_SCRAPER_COLUMN_MAP = Object.freeze({
+  "media href": "gig_url",
+  "box-image-ratio src": "gig_image_url",
+  "_172854 src": "seller_profile_image_url",
+  "text-bold href": "seller_profile_url",
+  t6d0qrk: "seller_name",
+  "_1uflkdh1j src": "seller_badge_icon_url",
+  fn33512: "seller_badge_text",
+  _30fcb2: "gig_title",
+  "rating-score": "rating",
+  "rating-count-number": "review_count",
+  "text-bold 2": "starting_price",
+  "t6d0qrk 3": "extra_features",
+});
+
 /**
  * @typedef {import("../../types/domain.js").ImportResult} ImportResult
  * @typedef {import("../../types/domain.js").ImportIssue} ImportIssue
@@ -35,8 +50,8 @@ const OPTIONAL_MEDIA_BADGE_FIELDS = [
 /**
  * @param {{
  *   fileName: string,
- *   content: string | Buffer | Uint8Array,
- *   niche: { id: string, name: string, createdAt?: string },
+ *   content: string | ArrayBuffer | Uint8Array,
+ *   niche?: { id: string, name: string, createdAt?: string },
  *   uploadedAt?: string,
  *   importRunId?: string
  * }} input
@@ -45,17 +60,25 @@ const OPTIONAL_MEDIA_BADGE_FIELDS = [
 export function importGigFile(input) {
   const uploadedAt = input.uploadedAt ?? new Date().toISOString();
   const fileType = inferFileType(input.fileName);
-  const contentBuffer = toBuffer(input.content);
+  const contentBytes = toBytes(input.content);
+  const initialNiche = input.niche?.name?.trim()
+    ? {
+        id: input.niche.id || slug(input.niche.name),
+        name: input.niche.name.trim(),
+        createdAt: input.niche.createdAt ?? uploadedAt,
+      }
+    : {
+        id: slug(UNCATEGORIZED_NICHE_NAME),
+        name: UNCATEGORIZED_NICHE_NAME,
+        createdAt: uploadedAt,
+      };
   const importRunId =
-    input.importRunId ?? `import_${stableHash(`${input.fileName}:${input.niche.id}:${contentBuffer.toString("base64")}`).slice(0, 16)}`;
-  const niche = {
-    id: input.niche.id,
-    name: input.niche.name,
-    createdAt: input.niche.createdAt ?? uploadedAt,
-  };
+    input.importRunId ?? `import_${stableHash(`${input.fileName}:${initialNiche.id}:${stableHash(contentBytes)}`).slice(0, 16)}`;
+  let niche = initialNiche;
 
-  const parsedRows = fileType === "csv" ? parseCsv(contentBuffer.toString("utf8")) : parseXlsx(contentBuffer);
-  const { headers, rows } = parsedRows;
+  const parsedRows = fileType === "csv" ? parseCsv(decodeUtf8(contentBytes)) : parseXlsx(contentBytes);
+  const mappedImport = applyColumnMapping(parsedRows.headers, parsedRows.rows);
+  const { headers, rows } = mappedImport;
   const headerValidation = validateHeaders(headers);
   /** @type {ImportIssue[]} */
   const issues = [];
@@ -86,6 +109,7 @@ export function importGigFile(input) {
     importRunId,
     rowNumber: index + 1,
     rawData: row,
+    sourceData: mappedImport.originalRows[index] ?? {},
   }));
 
   /** @type {NormalizedGig[]} */
@@ -158,6 +182,22 @@ export function importGigFile(input) {
   }
 
   const warningCount = issues.filter((issue) => issue.severity === "warning").length;
+  const detectedNiche = detectNicheFromGigs(normalizedGigs);
+  const hasManualNiche = Boolean(input.niche?.name?.trim());
+  if (!hasManualNiche) {
+    niche = {
+      id: slug(detectedNiche.suggestedName),
+      name: detectedNiche.suggestedName,
+      createdAt: uploadedAt,
+    };
+    for (const gig of normalizedGigs) gig.nicheId = niche.id;
+  }
+  const nicheDetection = {
+    ...detectedNiche,
+    selectedName: niche.name,
+    applied: !hasManualNiche,
+    manualOverride: hasManualNiche,
+  };
 
   return {
     niche,
@@ -170,7 +210,10 @@ export function importGigFile(input) {
       rowCount: rows.length,
       supportedFieldNames: headerValidation.recognizedColumns,
       ignoredFieldNames: headerValidation.ignoredColumns,
+      originalFieldNames: mappedImport.originalHeaders,
+      columnMapping: mappedImport.columnMapping,
     },
+    nicheDetection,
     headerValidation,
     rawRows,
     normalizedGigs,
@@ -197,12 +240,20 @@ function inferFileType(fileName) {
 }
 
 /**
- * @param {string | Buffer | Uint8Array} content
+ * @param {string | ArrayBuffer | Uint8Array} content
  */
-function toBuffer(content) {
-  if (Buffer.isBuffer(content)) return content;
-  if (content instanceof Uint8Array) return Buffer.from(content);
-  return Buffer.from(content, "utf8");
+function toBytes(content) {
+  if (typeof content === "string") return new TextEncoder().encode(content);
+  if (content instanceof Uint8Array) return content;
+  if (content instanceof ArrayBuffer) return new Uint8Array(content);
+  return new Uint8Array(content);
+}
+
+/**
+ * @param {Uint8Array} bytes
+ */
+function decodeUtf8(bytes) {
+  return new TextDecoder("utf-8").decode(bytes);
 }
 
 /**
@@ -253,10 +304,10 @@ export function parseCsv(text) {
 }
 
 /**
- * @param {Buffer} buffer
+ * @param {Uint8Array} bytes
  */
-function parseXlsx(buffer) {
-  const workbook = read(buffer, { type: "buffer", cellDates: false });
+function parseXlsx(bytes) {
+  const workbook = read(bytes, { type: "array", cellDates: false });
   const firstSheetName = workbook.SheetNames[0];
   if (!firstSheetName) return { headers: [], rows: [] };
   const table = utils.sheet_to_json(workbook.Sheets[firstSheetName], {
@@ -285,6 +336,57 @@ function tableToObjects(table) {
       return record;
     });
   return { headers, rows };
+}
+
+/**
+ * @param {string[]} headers
+ * @param {Record<string, string>[]} rows
+ */
+function applyColumnMapping(headers, rows) {
+  const seenCanonicalHeaders = new Set();
+  const sourceToCanonical = new Map();
+  const canonicalHeaders = [];
+  const mappings = [];
+  const ignoredSourceFieldNames = [];
+
+  for (const sourceHeader of headers) {
+    const directCanonical = SUPPORTED_GIG_FIELDS.includes(sourceHeader) ? sourceHeader : null;
+    const mappedCanonical = directCanonical ?? INSTANT_DATA_SCRAPER_COLUMN_MAP[sourceHeader] ?? null;
+
+    if (!mappedCanonical || seenCanonicalHeaders.has(mappedCanonical)) {
+      ignoredSourceFieldNames.push(sourceHeader);
+      continue;
+    }
+
+    seenCanonicalHeaders.add(mappedCanonical);
+    sourceToCanonical.set(sourceHeader, mappedCanonical);
+    canonicalHeaders.push(mappedCanonical);
+
+    if (sourceHeader !== mappedCanonical) {
+      mappings.push({ sourceColumn: sourceHeader, targetField: mappedCanonical });
+    }
+  }
+
+  const mappedRows = rows.map((row) => {
+    const mappedRow = {};
+    for (const [sourceHeader, canonicalHeader] of sourceToCanonical) {
+      mappedRow[canonicalHeader] = row[sourceHeader] ?? "";
+    }
+    return mappedRow;
+  });
+
+  return {
+    headers: canonicalHeaders,
+    rows: mappedRows,
+    originalHeaders: headers,
+    originalRows: rows,
+    columnMapping: {
+      applied: mappings.length > 0,
+      mappings,
+      originalFieldNames: headers,
+      ignoredSourceFieldNames,
+    },
+  };
 }
 
 /**
@@ -343,8 +445,33 @@ function pushCleaningIssues(issues, rowNumber, fieldName, result) {
 }
 
 /**
- * @param {string} value
+ * @param {string | Uint8Array} value
  */
 function stableHash(value) {
-  return createHash("sha256").update(value).digest("hex");
+  const bytes = typeof value === "string" ? new TextEncoder().encode(value) : value;
+  let h1 = 0x811c9dc5;
+  let h2 = 0x9e3779b9;
+  let h3 = 0x85ebca6b;
+  let h4 = 0xc2b2ae35;
+
+  for (const byte of bytes) {
+    h1 = Math.imul(h1 ^ byte, 0x01000193);
+    h2 = Math.imul(h2 ^ byte, 0x85ebca6b);
+    h3 = Math.imul(h3 ^ byte, 0xc2b2ae35);
+    h4 = Math.imul(h4 ^ byte, 0x27d4eb2f);
+  }
+
+  return [h1, h2, h3, h4].map((hash) => (hash >>> 0).toString(16).padStart(8, "0")).join("");
 }
+
+/**
+ * @param {string} value
+ */
+function slug(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "") || "uncategorized_market";
+}
+

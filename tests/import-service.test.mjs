@@ -31,6 +31,8 @@ test("imports CSV fixture into raw rows, deduplicated normalized gigs, and summa
   assert.equal(result.importRun.fileType, "csv");
   assert.equal(result.importRun.sourceFileName, "sample-gigs.csv");
   assert.equal(result.importRun.nicheId, niche.id);
+  assert.equal(result.importRun.columnMapping.applied, false);
+  assert.ok(result.importRun.originalFieldNames.includes("gig_url"));
   assert.equal(result.rawRows.length, 4);
   assert.equal(result.normalizedGigs.length, 2);
   assert.deepEqual(result.summary, {
@@ -112,17 +114,70 @@ test("imports XLSX fixture buffer with the same import behavior", () => {
   assert.equal(result.normalizedGigs[0].starting_price.value, 200);
 });
 
-test("requires seller_name, gig_url, gig_title, and starting_price headers", () => {
+test("maps Instant Data Scraper headers before validation and analytics", async () => {
+  const csv = await readFile(new URL("./fixtures/import/instant-data-scraper-gigs.csv", import.meta.url), "utf8");
   const result = importGigFile({
-    fileName: "missing-required.csv",
+    fileName: "instant-data-scraper-gigs.csv",
+    content: csv,
+    niche,
+    uploadedAt,
+    importRunId: "import_ids_fixture",
+  });
+
+  assert.equal(result.importRun.columnMapping.applied, true);
+  assert.deepEqual(result.headerValidation.missingRequiredColumns, []);
+  assert.equal(result.summary.imported_rows, 2);
+  assert.equal(result.summary.invalid_rows, 0);
+  assert.ok(result.importRun.columnMapping.mappings.some((mapping) => mapping.sourceColumn === "media href" && mapping.targetField === "gig_url"));
+  assert.ok(result.importRun.columnMapping.mappings.some((mapping) => mapping.sourceColumn === "text-bold 2" && mapping.targetField === "starting_price"));
+  assert.ok(result.importRun.columnMapping.ignoredSourceFieldNames.includes("unused class"));
+  assert.ok(result.rawRows[0].sourceData["media href"].includes("ids-seller"));
+  assert.equal(result.normalizedGigs[0].gig_title, "I will build OpenAI agents with n8n");
+  assert.equal(result.normalizedGigs[0].starting_price.value, 120);
+});
+
+test("reports missing required fields after Instant Data Scraper mapping", () => {
+  const result = importGigFile({
+    fileName: "missing-ids-price.csv",
+    content: "media href,_30fcb2\nhttps://www.fiverr.com/a/b,Title\n",
+    niche,
+    uploadedAt,
+    importRunId: "import_ids_missing_required",
+  });
+
+  assert.equal(result.importRun.columnMapping.applied, true);
+  assert.deepEqual(result.headerValidation.missingRequiredColumns, ["starting_price"]);
+  assert.equal(result.summary.imported_rows, 0);
+  assert.equal(result.summary.invalid_rows, 1);
+  assert.ok(result.issues.some((issue) => issue.code === "missing_required_column" && issue.fieldName === "starting_price"));
+});
+
+test("keeps unknown Instant Data Scraper source columns ignored without inventing fields", () => {
+  const result = importGigFile({
+    fileName: "ids-unknown.csv",
+    content: "media href,_30fcb2,text-bold 2,not-a-supported-column\nhttps://www.fiverr.com/a/b,Title,$25,ignored\n",
+    niche,
+    uploadedAt,
+    importRunId: "import_ids_unknown",
+  });
+
+  assert.equal(result.summary.imported_rows, 1);
+  assert.deepEqual(result.importRun.columnMapping.ignoredSourceFieldNames, ["not-a-supported-column"]);
+  assert.equal(result.normalizedGigs[0].extra_features, null);
+});
+
+test("requires gig_url, gig_title, and starting_price headers while seller_name stays optional", () => {
+  const result = importGigFile({
+    fileName: "missing-seller.csv",
     content: "gig_url,gig_title,starting_price\nhttps://www.fiverr.com/a/b,Title,$20\n",
     niche,
     uploadedAt,
-    importRunId: "import_missing_required",
+    importRunId: "import_missing_seller",
   });
 
-  assert.deepEqual(result.headerValidation.missingRequiredColumns, ["seller_name"]);
-  assert.equal(result.summary.imported_rows, 0);
-  assert.equal(result.summary.invalid_rows, 1);
-  assert.ok(result.issues.some((issue) => issue.code === "missing_required_column" && issue.fieldName === "seller_name"));
+  assert.deepEqual(result.headerValidation.missingRequiredColumns, []);
+  assert.equal(result.summary.imported_rows, 1);
+  assert.equal(result.summary.invalid_rows, 0);
+  assert.equal(result.normalizedGigs[0].seller_name, null);
+  assert.ok(result.issues.some((issue) => issue.code === "missing_optional_column" && issue.fieldName === "seller_name"));
 });
